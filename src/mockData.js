@@ -124,6 +124,15 @@ export const sampleDocuments = [
     documents: null,
   },
   {
+    id: "lorem-ipsum",
+    displayCategoryName: "Lorem Ipsum",
+    seCategoryName: "Lorem Ipsum Dolor",
+    portalTaskId: 1235,
+    contentfulIncluded: false,
+    subCategories: null,
+    documents: null,
+  },
+  {
     id: "other-documents",
     displayCategoryName: "Other Documents",
     seCategoryName: null,

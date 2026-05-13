@@ -77,6 +77,14 @@ export default function DocumentMenu({ documents = [] }) {
   const safeDocs = (arr) => arr ?? [];
   const safeSubCats = (arr) => arr ?? [];
 
+  /** Total document count for a subcategory */
+  const subDocCount = (sub) => safeDocs(sub.documents).length;
+
+  /** Total document count for a category (own docs + all subcategory docs) */
+  const catDocCount = (cat) =>
+    safeDocs(cat.documents).length +
+    safeSubCats(cat.subCategories).reduce((sum, sub) => sum + subDocCount(sub), 0);
+
   /** Documents to display in the content area */
   const displayedDocs = useMemo(() => {
     // "My Documents" - flatten everything
@@ -224,11 +232,12 @@ export default function DocumentMenu({ documents = [] }) {
         </ListItemButton>
 
         {/* Categories */}
-        {documents.map((cat) => {
+        {documents.filter((cat) => catDocCount(cat) > 0).map((cat) => {
           const isCatSelected = selectedCategoryId === cat.id;
           const isExpanded = expandedCategoryId === cat.id;
           const hasSubCats =
-            cat.subCategories != null && cat.subCategories.length > 0;
+            cat.subCategories != null &&
+            cat.subCategories.some((sub) => subDocCount(sub) > 0);
 
           return (
             <React.Fragment key={cat.id}>
@@ -261,7 +270,7 @@ export default function DocumentMenu({ documents = [] }) {
               {hasSubCats && (
                 <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
-                    {(cat.subCategories ?? []).map((sub) => {
+                    {(cat.subCategories ?? []).filter((sub) => subDocCount(sub) > 0).map((sub) => {
                       const isSubSelected =
                         isCatSelected && selectedSubCategoryId === sub.id;
                       return (
@@ -356,7 +365,7 @@ export default function DocumentMenu({ documents = [] }) {
         </MenuItem>
 
         {/* Categories + their subcategories */}
-        {documents.map((cat) => {
+        {documents.filter((cat) => catDocCount(cat) > 0).map((cat) => {
           const isCatSelected = selectedCategoryId === cat.id;
           return (
             <React.Fragment key={cat.id}>
@@ -371,7 +380,7 @@ export default function DocumentMenu({ documents = [] }) {
               </MenuItem>
 
               {/* Subcategories indented */}
-              {(cat.subCategories ?? []).map((sub) => {
+              {(cat.subCategories ?? []).filter((sub) => subDocCount(sub) > 0).map((sub) => {
                 const isSubSelected =
                   isCatSelected && selectedSubCategoryId === sub.id;
                 return (

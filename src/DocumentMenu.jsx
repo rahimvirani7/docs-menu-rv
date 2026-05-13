@@ -22,146 +22,138 @@ import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutl
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 
-/** Shared sx for desktop sidebar list items */
-function sidebarItemSx(theme) {
-  return {
-    py: 1.5,
-    px: 2,
-    "&.Mui-selected": {
-      backgroundColor: theme.palette.action.selected,
-      borderRight: `4px solid ${theme.palette.primary.main}`,
-    },
-    textTransform: "none",
-  };
-}
+// ---------------------------------------------------------------------------
+// Utilities
+// ---------------------------------------------------------------------------
+
+/** Null-safe array accessor. */
+const toArray = (val) => val ?? [];
+
+/** Number of documents directly inside a subcategory. */
+const subDocCount = (sub) => toArray(sub.documents).length;
+
+/** Total document count for a category: own docs + all subcategory docs. */
+const catDocCount = (cat) =>
+  toArray(cat.documents).length +
+  toArray(cat.subCategories).reduce((sum, sub) => sum + subDocCount(sub), 0);
+
+/** Shared sx for every sidebar / menu list item. */
+const sidebarItemSx = (theme) => ({
+  py: 1.5,
+  px: 2,
+  textTransform: "none",
+  "&.Mui-selected": {
+    backgroundColor: theme.palette.action.selected, // TODO: update to #EBF5FF from theme color
+    borderRight: `2px solid ${theme.palette.primary.main}`, // TODO:update to #003368 from theme color
+  },
+});
+
+const selectedFolderIconSx = (theme) => ({
+  color: theme.palette.primary.main, // TODO: update to #003368 from theme color
+});
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+/** Folder icon that switches between filled and outlined based on selection. */
+const FolderItemIcon = ({ selected, size }) => (
+  <ListItemIcon sx={{ minWidth: 36 }}>
+    {selected ? (
+      <FolderIcon sx={selectedFolderIconSx} fontSize={size} />
+    ) : (
+      <FolderOutlinedIcon fontSize={size} />
+    )}
+  </ListItemIcon>
+);
+
+// ---------------------------------------------------------------------------
+// DocumentMenu
+// ---------------------------------------------------------------------------
 
 /**
- * DocumentMenu
  * Props:
- *  - documents: Array of category objects matching the new data shape
- *    { id, displayCategoryName, seCategoryName, subCategories, documents }
+ *  - documents: Array of category objects
+ *    { id, displayCategoryName, subCategories, documents, ... }
  */
 export default function DocumentMenu({ documents = [] }) {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm")); // TODO: confirm sm breakpoint starts at 767px when integrating
 
-  // --- Selection state ---
-  // selectedCategoryId: null = "My Documents"
-  // selectedSubCategoryId: null = show subcategory list for the selected category
+  // null = "My Documents" (all docs)
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [selectedSubCategoryId, setSelectedSubCategoryId] = useState(null);
+  const [expandedCategoryId, setExpandedCategoryId] = useState(null); // desktop only
+  const [anchorEl, setAnchorEl] = useState(null); // mobile menu anchor
 
-  // Desktop: track which category is expanded in the sidebar
-  const [expandedCategoryId, setExpandedCategoryId] = useState(null);
-
-  // Mobile menu anchor
-  const [anchorEl, setAnchorEl] = useState(null);
   const mobileOpen = Boolean(anchorEl);
 
-  // --- Derived data ---
+  // ---------------------------------------------------------------------------
+  // Derived data
+  // ---------------------------------------------------------------------------
+
   const selectedCategory = useMemo(
     () => documents.find((c) => c.id === selectedCategoryId) ?? null,
     [documents, selectedCategoryId],
   );
 
-  const selectedSubCategory = useMemo(() => {
-    if (!selectedCategory || !selectedSubCategoryId) return null;
-    return (
-      selectedCategory.subCategories?.find(
+  const selectedSubCategory = useMemo(
+    () =>
+      selectedCategory?.subCategories?.find(
         (s) => s.id === selectedSubCategoryId,
-      ) ?? null
-    );
-  }, [selectedCategory, selectedSubCategoryId]);
+      ) ?? null,
+    [selectedCategory, selectedSubCategoryId],
+  );
 
-  /** Safe accessor - returns [] when the field is null/undefined */
-  const safeDocs = (arr) => arr ?? [];
-  const safeSubCats = (arr) => arr ?? [];
+  // The label shown in the mobile button and the content-area heading.
+  const activeLabel =
+    selectedSubCategory?.displaySubCategoryName ??
+    selectedCategory?.displayCategoryName ??
+    "My Documents";
 
-  /** Total document count for a subcategory */
-  const subDocCount = (sub) => safeDocs(sub.documents).length;
-
-  /** Total document count for a category (own docs + all subcategory docs) */
-  const catDocCount = (cat) =>
-    safeDocs(cat.documents).length +
-    safeSubCats(cat.subCategories).reduce((sum, sub) => sum + subDocCount(sub), 0);
-
-  /** Documents to display in the content area */
   const displayedDocs = useMemo(() => {
-    // "My Documents" - flatten everything
     if (!selectedCategoryId) {
+      // "My Documents" — flatten all docs across every category and subcategory
       return documents.flatMap((cat) => [
-        ...safeDocs(cat.documents),
-        ...safeSubCats(cat.subCategories).flatMap((sub) =>
-          safeDocs(sub.documents),
-        ),
+        ...toArray(cat.documents),
+        ...toArray(cat.subCategories).flatMap((sub) => toArray(sub.documents)),
       ]);
     }
     if (!selectedCategory) return [];
+    if (selectedSubCategory) return toArray(selectedSubCategory.documents);
+    // Category with no subcategories (e.g. "Other Documents")
+    return toArray(selectedCategory.documents);
+  }, [documents, selectedCategoryId, selectedCategory, selectedSubCategory]);
 
-    // A subcategory is selected
-    if (selectedSubCategoryId && selectedSubCategory) {
-      return safeDocs(selectedSubCategory.documents);
-    }
+  // Categories / subcategories that have at least one document (used in both views).
+  const visibleCategories = useMemo(
+    () => documents.filter((cat) => catDocCount(cat) > 0),
+    [documents],
+  );
 
-    // Category selected but no subcategory - show category-level docs
-    // (for categories like "Other Documents" that have no subCategories)
-    return safeDocs(selectedCategory.documents);
-  }, [
-    documents,
-    selectedCategoryId,
-    selectedCategory,
-    selectedSubCategoryId,
-    selectedSubCategory,
-  ]);
+  // ---------------------------------------------------------------------------
+  // Handlers
+  // ---------------------------------------------------------------------------
 
-  // --- Handlers ---
-  const handleMobileOpen = (e) => setAnchorEl(e.currentTarget);
-  const handleMobileClose = () => setAnchorEl(null);
-
-  /** Called when a category row is clicked (desktop sidebar or mobile menu) */
   const handleCategorySelect = (catId) => {
-    if (catId === null) {
-      // "My Documents"
-      setSelectedCategoryId(null);
-      setSelectedSubCategoryId(null);
-      setExpandedCategoryId(null);
-      handleMobileClose();
-      return;
-    }
-    const cat = documents.find((c) => c.id === catId);
-    if (!cat) return;
-
     setSelectedCategoryId(catId);
     setSelectedSubCategoryId(null);
-
-    // Desktop: toggle expand
-    setExpandedCategoryId((prev) => (prev === catId ? null : catId));
-    handleMobileClose();
+    setExpandedCategoryId((prev) => (catId && prev !== catId ? catId : null));
+    setAnchorEl(null);
   };
 
-  /** Called when a subcategory row is clicked */
-  const handleSubCategorySelect = (subId) => {
+  const handleSubCategorySelect = (catId, subId) => {
+    setSelectedCategoryId(catId);
     setSelectedSubCategoryId(subId);
-    handleMobileClose();
+    setAnchorEl(null);
   };
 
-  // --- Label for the mobile button ---
-  const mobileLabel = useMemo(() => {
-    if (selectedSubCategory) return selectedSubCategory.displaySubCategoryName;
-    if (selectedCategory) return selectedCategory.displayCategoryName;
-    return "My Documents";
-  }, [selectedCategory, selectedSubCategory]);
+  // ---------------------------------------------------------------------------
+  // Render: document list (content area) - ***IGNORE THIS PART WHEN INTEGRATING***
+  // ---------------------------------------------------------------------------
 
-  // --- Content area heading ---
-  const contentHeading = useMemo(() => {
-    if (selectedSubCategory) return selectedSubCategory.displaySubCategoryName;
-    if (selectedCategory) return selectedCategory.displayCategoryName;
-    return "My Documents";
-  }, [selectedCategory, selectedSubCategory]);
-
-  // --- Render helpers ---
-  const renderDocumentList = (docs) => {
-    if (!docs || docs.length === 0) {
+  const renderDocumentList = () => {
+    if (!displayedDocs.length) {
       return (
         <Typography variant="body2" color="text.secondary">
           No documents in this category.
@@ -170,25 +162,24 @@ export default function DocumentMenu({ documents = [] }) {
     }
     return (
       <List disablePadding>
-        {docs.map((doc) => (
+        {displayedDocs.map((doc) => (
           <ListItem key={doc.documentTransactionalId} sx={{ py: 1, px: 0 }}>
             <ListItemIcon sx={{ minWidth: 40 }}>
               <InsertDriveFileOutlinedIcon />
             </ListItemIcon>
             <ListItemText
-              primary={<Typography variant="body1">{doc.title}</Typography>}
-              secondary={
-                <Typography variant="caption" color="text.secondary">
-                  {doc.fileDate
-                    ? new Date(doc.fileDate).toLocaleDateString(undefined, {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })
-                    : ""}
-                  {doc.fileType ? ` - ${doc.fileType.toUpperCase()}` : ""}
-                </Typography>
-              }
+              primary={doc.title}
+              secondary={[
+                doc.fileDate &&
+                  new Date(doc.fileDate).toLocaleDateString(undefined, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  }),
+                doc.fileType && doc.fileType.toUpperCase(),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             />
           </ListItem>
         ))}
@@ -196,15 +187,17 @@ export default function DocumentMenu({ documents = [] }) {
     );
   };
 
-  // --- Desktop sidebar ---
+  // ---------------------------------------------------------------------------
+  // Render: desktop sidebar
+  // ---------------------------------------------------------------------------
+
   const renderDesktopSidebar = () => (
     <Paper
       elevation={0}
-      sx={{
-        borderRight: `1px solid ${theme.palette.divider}`,
-        minHeight: 240,
-      }}
+      sx={{ borderRight: `1px solid ${theme.palette.divider}`, minHeight: 240 }}
+      className="side-bar-wrapper h-full"
     >
+      {/* TODO: update to desired divider color ^ from theme */}
       <List component="nav" disablePadding>
         {/* My Documents */}
         <ListItemButton
@@ -212,32 +205,17 @@ export default function DocumentMenu({ documents = [] }) {
           onClick={() => handleCategorySelect(null)}
           sx={sidebarItemSx(theme)}
         >
-          <ListItemIcon sx={{ minWidth: 36 }}>
-            {selectedCategoryId === null ? (
-              <FolderIcon />
-            ) : (
-              <FolderOutlinedIcon />
-            )}
-          </ListItemIcon>
-          <ListItemText
-            primary={
-              <Typography
-                variant="body1"
-                sx={{ textTransform: "none", color: "text.primary" }}
-              >
-                My Documents
-              </Typography>
-            }
-          />
+          <FolderItemIcon selected={selectedCategoryId === null} />
+          <ListItemText primary="My Documents" />
         </ListItemButton>
 
         {/* Categories */}
-        {documents.filter((cat) => catDocCount(cat) > 0).map((cat) => {
+        {visibleCategories.map((cat) => {
           const isCatSelected = selectedCategoryId === cat.id;
           const isExpanded = expandedCategoryId === cat.id;
-          const hasSubCats =
-            cat.subCategories != null &&
-            cat.subCategories.some((sub) => subDocCount(sub) > 0);
+          const visibleSubs = toArray(cat.subCategories).filter(
+            (sub) => subDocCount(sub) > 0,
+          );
 
           return (
             <React.Fragment key={cat.id}>
@@ -246,20 +224,9 @@ export default function DocumentMenu({ documents = [] }) {
                 onClick={() => handleCategorySelect(cat.id)}
                 sx={sidebarItemSx(theme)}
               >
-                <ListItemIcon sx={{ minWidth: 36 }}>
-                  {isCatSelected ? <FolderIcon /> : <FolderOutlinedIcon />}
-                </ListItemIcon>
-                <ListItemText
-                  primary={
-                    <Typography
-                      variant="body1"
-                      sx={{ textTransform: "none", color: "text.primary" }}
-                    >
-                      {cat.displayCategoryName}
-                    </Typography>
-                  }
-                />
-                {hasSubCats &&
+                <FolderItemIcon selected={isCatSelected} />
+                <ListItemText primary={cat.displayCategoryName} />
+                {visibleSubs.length > 0 &&
                   (isExpanded ? (
                     <ExpandLessIcon fontSize="small" />
                   ) : (
@@ -267,44 +234,28 @@ export default function DocumentMenu({ documents = [] }) {
                   ))}
               </ListItemButton>
 
-              {hasSubCats && (
+              {visibleSubs.length > 0 && (
                 <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
-                    {(cat.subCategories ?? []).filter((sub) => subDocCount(sub) > 0).map((sub) => {
+                    {visibleSubs.map((sub) => {
                       const isSubSelected =
                         isCatSelected && selectedSubCategoryId === sub.id;
                       return (
                         <ListItemButton
                           key={sub.id}
                           selected={isSubSelected}
-                          onClick={() => {
-                            setSelectedCategoryId(cat.id);
-                            handleSubCategorySelect(sub.id);
-                          }}
-                          sx={{
-                            ...sidebarItemSx(theme),
-                            pl: 5, // indent
-                          }}
+                          onClick={() =>
+                            handleSubCategorySelect(cat.id, sub.id)
+                          }
+                          sx={{ ...sidebarItemSx(theme), pl: 5 }}
                         >
-                          <ListItemIcon sx={{ minWidth: 36 }}>
-                            {isSubSelected ? (
-                              <FolderIcon fontSize="small" />
-                            ) : (
-                              <FolderOutlinedIcon fontSize="small" />
-                            )}
-                          </ListItemIcon>
+                          <FolderItemIcon
+                            selected={isSubSelected}
+                            size="small"
+                          />
                           <ListItemText
-                            primary={
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  textTransform: "none",
-                                  color: "text.primary",
-                                }}
-                              >
-                                {sub.displaySubCategoryName}
-                              </Typography>
-                            }
+                            primaryTypographyProps={{ variant: "body2" }}
+                            primary={sub.displaySubCategoryName}
                           />
                         </ListItemButton>
                       );
@@ -319,7 +270,10 @@ export default function DocumentMenu({ documents = [] }) {
     </Paper>
   );
 
-  // --- Mobile dropdown ---
+  // ---------------------------------------------------------------------------
+  // Render: mobile dropdown
+  // ---------------------------------------------------------------------------
+
   const renderMobileDropdown = () => (
     <Box sx={{ display: "flex", alignItems: "center" }}>
       <Button
@@ -328,7 +282,7 @@ export default function DocumentMenu({ documents = [] }) {
         aria-controls={mobileOpen ? "category-menu" : undefined}
         aria-haspopup="true"
         aria-expanded={mobileOpen ? "true" : undefined}
-        onClick={handleMobileOpen}
+        onClick={(e) => setAnchorEl(e.currentTarget)}
         endIcon={<ExpandMoreIcon />}
         sx={{
           justifyContent: "flex-start",
@@ -336,15 +290,16 @@ export default function DocumentMenu({ documents = [] }) {
           color: "text.primary",
         }}
       >
-        <FolderIcon sx={{ mr: 1 }} />
-        <Typography variant="subtitle1">{mobileLabel}</Typography>
+        <FolderIcon sx={{ color: theme.palette.primary.main, mr: 1 }} />
+        {/* TODO: update ^ to desired color from theme */}
+        <Typography variant="subtitle1">{activeLabel}</Typography>
       </Button>
 
       <Menu
         id="category-menu"
         anchorEl={anchorEl}
         open={mobileOpen}
-        onClose={handleMobileClose}
+        onClose={() => setAnchorEl(null)}
         anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
         transformOrigin={{ vertical: "top", horizontal: "left" }}
         MenuListProps={{ "aria-labelledby": "category-button" }}
@@ -354,52 +309,38 @@ export default function DocumentMenu({ documents = [] }) {
           selected={selectedCategoryId === null}
           onClick={() => handleCategorySelect(null)}
         >
-          <ListItemIcon sx={{ minWidth: 36 }}>
-            {selectedCategoryId === null ? (
-              <FolderIcon />
-            ) : (
-              <FolderOutlinedIcon />
-            )}
-          </ListItemIcon>
+          <FolderItemIcon selected={selectedCategoryId === null} />
           <ListItemText>My Documents</ListItemText>
         </MenuItem>
 
-        {/* Categories + their subcategories */}
-        {documents.filter((cat) => catDocCount(cat) > 0).map((cat) => {
+        {/* Categories + indented subcategories */}
+        {visibleCategories.map((cat) => {
           const isCatSelected = selectedCategoryId === cat.id;
+          const visibleSubs = toArray(cat.subCategories).filter(
+            (sub) => subDocCount(sub) > 0,
+          );
+
           return (
             <React.Fragment key={cat.id}>
               <MenuItem
                 selected={isCatSelected && !selectedSubCategoryId}
                 onClick={() => handleCategorySelect(cat.id)}
               >
-                <ListItemIcon sx={{ minWidth: 36 }}>
-                  {isCatSelected ? <FolderIcon /> : <FolderOutlinedIcon />}
-                </ListItemIcon>
+                <FolderItemIcon selected={isCatSelected} />
                 <ListItemText>{cat.displayCategoryName}</ListItemText>
               </MenuItem>
 
-              {/* Subcategories indented */}
-              {(cat.subCategories ?? []).filter((sub) => subDocCount(sub) > 0).map((sub) => {
+              {visibleSubs.map((sub) => {
                 const isSubSelected =
                   isCatSelected && selectedSubCategoryId === sub.id;
                 return (
                   <MenuItem
                     key={sub.id}
                     selected={isSubSelected}
-                    onClick={() => {
-                      setSelectedCategoryId(cat.id);
-                      handleSubCategorySelect(sub.id);
-                    }}
+                    onClick={() => handleSubCategorySelect(cat.id, sub.id)}
                     sx={{ pl: 5 }}
                   >
-                    <ListItemIcon sx={{ minWidth: 36 }}>
-                      {isSubSelected ? (
-                        <FolderIcon fontSize="small" />
-                      ) : (
-                        <FolderOutlinedIcon fontSize="small" />
-                      )}
-                    </ListItemIcon>
+                    <FolderItemIcon selected={isSubSelected} size="small" />
                     <ListItemText>
                       <Typography variant="body2">
                         {sub.displaySubCategoryName}
@@ -415,16 +356,24 @@ export default function DocumentMenu({ documents = [] }) {
     </Box>
   );
 
-  // --- Main render ---
+  // ---------------------------------------------------------------------------
+  // Main render
+  // ---------------------------------------------------------------------------
+
+  // True when a category with visible subcategories is selected but none chosen yet.
+  const awaitingSubCategorySelection =
+    selectedCategory &&
+    !selectedSubCategoryId &&
+    toArray(selectedCategory.subCategories).some((sub) => subDocCount(sub) > 0);
+
   return (
     <Box sx={{ width: "100%", p: { xs: 1, sm: 2 } }}>
       <Grid container spacing={2}>
-        {/* Left / nav */}
-        <Grid size={{ xs: 12, sm: 4, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 4, md: 3 }} className="side-bar-grid">
           {isMobile ? renderMobileDropdown() : renderDesktopSidebar()}
         </Grid>
 
-        {/* Right / content */}
+        {/* ***IGNORE THIS PART WHEN INTEGRATING*** */}
         <Grid size={{ xs: 12, sm: 8, md: 9 }}>
           <Box sx={{ pl: { xs: 0, sm: 3 }, pt: { xs: 1, sm: 0 } }}>
             <Typography variant="h6" sx={{ mb: 2 }}>
@@ -441,19 +390,15 @@ export default function DocumentMenu({ documents = [] }) {
               }}
             >
               <Typography variant="subtitle1" gutterBottom>
-                {contentHeading}
+                {activeLabel}
               </Typography>
 
-              {/* If a category is selected but no subcategory yet, and it has subcategories,
-                    show a prompt to pick a subcategory */}
-              {selectedCategory &&
-              !selectedSubCategoryId &&
-              (selectedCategory.subCategories ?? []).length > 0 ? (
+              {awaitingSubCategorySelection ? (
                 <Typography variant="body2" color="text.secondary">
                   Select a subcategory to view documents.
                 </Typography>
               ) : (
-                renderDocumentList(displayedDocs)
+                renderDocumentList()
               )}
             </Box>
           </Box>

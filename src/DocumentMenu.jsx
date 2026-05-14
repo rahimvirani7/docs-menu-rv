@@ -81,6 +81,15 @@ const FolderItemIcon = ({ selected, size }) => (
   </ListItemIcon>
 );
 
+// Sentinel entry that represents the "show all" state.
+// id: null matches the selectedCategoryId initial value and all related checks.
+const MY_DOCUMENTS = {
+  id: null,
+  displayCategoryName: "My Documents",
+  subCategories: null,
+  documents: null,
+};
+
 // ---------------------------------------------------------------------------
 // DocumentMenu
 // ---------------------------------------------------------------------------
@@ -94,11 +103,10 @@ export default function DocumentMenu({ documents = [] }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm")); // TODO: confirm sm breakpoint starts at 767px when integrating
 
-  // null = "My Documents" (all docs)
-  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null); // null = "My Documents" (all docs)
   const [selectedSubCategoryId, setSelectedSubCategoryId] = useState(null);
   const [expandedCategoryId, setExpandedCategoryId] = useState(null); // desktop only
-  const [anchorEl, setAnchorEl] = useState(null); // mobile menu anchor
+  const [anchorEl, setAnchorEl] = useState(null); // mobile menu anchor HTML elements
 
   const mobileOpen = Boolean(anchorEl);
 
@@ -106,11 +114,13 @@ export default function DocumentMenu({ documents = [] }) {
   // Derived data
   // ---------------------------------------------------------------------------
 
+  // TODO: Check for duplicacy
   const selectedCategory = useMemo(
     () => documents.find((c) => c.id === selectedCategoryId) ?? null,
     [documents, selectedCategoryId],
   );
 
+  // TODO: Check for duplicacy
   const selectedSubCategory = useMemo(
     () =>
       selectedCategory?.subCategories?.find(
@@ -141,12 +151,12 @@ export default function DocumentMenu({ documents = [] }) {
 
   // Categories / subcategories that have at least one document (used in both views).
   const visibleCategories = useMemo(
-    () => documents.filter((cat) => catDocCount(cat) > 0),
+    () => [MY_DOCUMENTS, ...documents.filter((cat) => catDocCount(cat) > 0)],
     [documents],
   );
 
   // ---------------------------------------------------------------------------
-  // Handlers
+  // Event Handlers
   // ---------------------------------------------------------------------------
 
   const handleCategorySelect = (catId) => {
@@ -159,6 +169,7 @@ export default function DocumentMenu({ documents = [] }) {
   const handleSubCategorySelect = (catId, subId) => {
     setSelectedCategoryId(catId);
     setSelectedSubCategoryId(subId);
+    setExpandedCategoryId(catId); // keep parent expanded on desktop
     setAnchorEl(null);
   };
 
@@ -208,21 +219,12 @@ export default function DocumentMenu({ documents = [] }) {
   const renderDesktopSidebar = () => (
     <Paper
       elevation={0}
-      sx={{ borderRight: `1px solid ${theme.palette.divider}`, minHeight: 240 }}
+      sx={{ borderRight: `1px solid ${theme.palette.divider}`, minHeight: 240, borderRadius: 0 }}
       className="side-bar-wrapper h-full"
     >
       {/* TODO: update to desired divider color ^ from theme */}
       <List component="nav" disablePadding>
-        {/* My Documents */}
-        <MenuItemButton
-          selected={selectedCategoryId === null}
-          onClick={() => handleCategorySelect(null)}
-        >
-          <FolderItemIcon selected={selectedCategoryId === null} />
-          <ListItemText primary="My Documents" />
-        </MenuItemButton>
-
-        {/* Categories */}
+        {/* Categories (includes "My Documents" sentinel at index 0) */}
         {visibleCategories.map((cat) => {
           const isCatSelected = selectedCategoryId === cat.id;
           const isExpanded = expandedCategoryId === cat.id;
@@ -231,7 +233,7 @@ export default function DocumentMenu({ documents = [] }) {
           );
 
           return (
-            <React.Fragment key={cat.id}>
+            <React.Fragment key={cat.id ?? "my-documents"}>
               <MenuItemButton
                 selected={isCatSelected && !selectedSubCategoryId}
                 onClick={() => handleCategorySelect(cat.id)}
@@ -259,7 +261,7 @@ export default function DocumentMenu({ documents = [] }) {
                           onClick={() =>
                             handleSubCategorySelect(cat.id, sub.id)
                           }
-                          sx={{ pl: 3 }}
+                          sx={{ pl: 4 }}
                         >
                           <FolderItemIcon
                             selected={isSubSelected}
@@ -311,18 +313,9 @@ export default function DocumentMenu({ documents = [] }) {
         onClose={() => setAnchorEl(null)}
         anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
         transformOrigin={{ vertical: "top", horizontal: "left" }}
-        MenuListProps={{ "aria-labelledby": "category-button" }}
+        MenuListProps={{ "aria-labelledby": "category-button" }} // shows error in console but needed for accessibility
       >
-        {/* My Documents */}
-        <MenuItem
-          selected={selectedCategoryId === null}
-          onClick={() => handleCategorySelect(null)}
-        >
-          <FolderItemIcon selected={selectedCategoryId === null} />
-          <ListItemText>My Documents</ListItemText>
-        </MenuItem>
-
-        {/* Categories + indented subcategories */}
+        {/* Categories + indented subcategories (includes "My Documents" sentinel at index 0) */}
         {visibleCategories.map((cat) => {
           const isCatSelected = selectedCategoryId === cat.id;
           const visibleSubs = toArray(cat.subCategories).filter(
@@ -330,7 +323,7 @@ export default function DocumentMenu({ documents = [] }) {
           );
 
           return (
-            <React.Fragment key={cat.id}>
+            <React.Fragment key={cat.id ?? "my-documents"}>
               <MenuItem
                 selected={isCatSelected && !selectedSubCategoryId}
                 onClick={() => handleCategorySelect(cat.id)}

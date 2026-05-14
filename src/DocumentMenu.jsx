@@ -15,12 +15,37 @@ import {
   Typography,
   useMediaQuery,
   useTheme,
+  styled,
 } from "@mui/material";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import FolderIcon from "@mui/icons-material/Folder";
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+
+const MenuItemButton = styled(ListItemButton)`
+  ${({ theme }) => `
+    padding: 7px 12px;
+    
+    &.Mui-selected {
+      background-color: ${theme.palette.action.selected};
+      border-right: 2px solid ${theme.palette.primary.main};
+      
+      .MuiListItemText-root {
+        color: ${theme.palette.primary.main};
+      }
+    },
+
+    .MuiTypography-root {
+      font-size: 0.875rem;
+      line-height: 1.25rem;
+    }
+
+    .MuiListItemIcon-root {
+      min-width: 32px;
+    }
+  `}
+`;
 
 // ---------------------------------------------------------------------------
 // Utilities
@@ -36,17 +61,6 @@ const subDocCount = (sub) => toArray(sub.documents).length;
 const catDocCount = (cat) =>
   toArray(cat.documents).length +
   toArray(cat.subCategories).reduce((sum, sub) => sum + subDocCount(sub), 0);
-
-/** Shared sx for every sidebar / menu list item. */
-const sidebarItemSx = (theme) => ({
-  py: 1.5,
-  px: 2,
-  textTransform: "none",
-  "&.Mui-selected": {
-    backgroundColor: theme.palette.action.selected, // TODO: update to #EBF5FF from theme color
-    borderRight: `2px solid ${theme.palette.primary.main}`, // TODO:update to #003368 from theme color
-  },
-});
 
 const selectedFolderIconSx = (theme) => ({
   color: theme.palette.primary.main, // TODO: update to #003368 from theme color
@@ -200,14 +214,13 @@ export default function DocumentMenu({ documents = [] }) {
       {/* TODO: update to desired divider color ^ from theme */}
       <List component="nav" disablePadding>
         {/* My Documents */}
-        <ListItemButton
+        <MenuItemButton
           selected={selectedCategoryId === null}
           onClick={() => handleCategorySelect(null)}
-          sx={sidebarItemSx(theme)}
         >
           <FolderItemIcon selected={selectedCategoryId === null} />
           <ListItemText primary="My Documents" />
-        </ListItemButton>
+        </MenuItemButton>
 
         {/* Categories */}
         {visibleCategories.map((cat) => {
@@ -219,10 +232,9 @@ export default function DocumentMenu({ documents = [] }) {
 
           return (
             <React.Fragment key={cat.id}>
-              <ListItemButton
+              <MenuItemButton
                 selected={isCatSelected && !selectedSubCategoryId}
                 onClick={() => handleCategorySelect(cat.id)}
-                sx={sidebarItemSx(theme)}
               >
                 <FolderItemIcon selected={isCatSelected} />
                 <ListItemText primary={cat.displayCategoryName} />
@@ -232,7 +244,7 @@ export default function DocumentMenu({ documents = [] }) {
                   ) : (
                     <ExpandMoreIcon fontSize="small" />
                   ))}
-              </ListItemButton>
+              </MenuItemButton>
 
               {visibleSubs.length > 0 && (
                 <Collapse in={isExpanded} timeout="auto" unmountOnExit>
@@ -241,23 +253,20 @@ export default function DocumentMenu({ documents = [] }) {
                       const isSubSelected =
                         isCatSelected && selectedSubCategoryId === sub.id;
                       return (
-                        <ListItemButton
+                        <MenuItemButton
                           key={sub.id}
                           selected={isSubSelected}
                           onClick={() =>
                             handleSubCategorySelect(cat.id, sub.id)
                           }
-                          sx={{ ...sidebarItemSx(theme), pl: 5 }}
+                          sx={{ pl: 3 }}
                         >
                           <FolderItemIcon
                             selected={isSubSelected}
                             size="small"
                           />
-                          <ListItemText
-                            primaryTypographyProps={{ variant: "body2" }}
-                            primary={sub.displaySubCategoryName}
-                          />
-                        </ListItemButton>
+                          <ListItemText primary={sub.displaySubCategoryName} />
+                        </MenuItemButton>
                       );
                     })}
                   </List>

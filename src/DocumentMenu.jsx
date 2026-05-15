@@ -23,7 +23,8 @@ import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutl
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 
-const MenuItemButton = styled(ListItemButton)`
+// TODO: Identify all "theme" properties and map them to the provided design specifics at the time of integration.
+const DesktopMenuItem = styled(ListItemButton)`
   ${({ theme }) => `
     padding: 7px 12px;
     
@@ -40,16 +41,25 @@ const MenuItemButton = styled(ListItemButton)`
       font-size: 0.875rem;
       line-height: 1.25rem;
     }
-
-    .MuiListItemIcon-root {
-      min-width: 32px;
-    }
   `}
 `;
 
-// ---------------------------------------------------------------------------
+const MobileMenuItem = styled(MenuItem)`
+  min-height: unset;
+  padding: 8px 16px;
+
+  .MuiListItemIcon-root {
+    min-width: 32px;
+  }
+
+  &.mobile-menu-subcategory .MuiListItemIcon-root {
+    min-width: 28px;
+  }
+`;
+
+// --------------------------------------------------
 // Utilities
-// ---------------------------------------------------------------------------
+// --------------------------------------------------
 
 /** Null-safe array accessor. */
 const toArray = (val) => val ?? [];
@@ -66,13 +76,13 @@ const selectedFolderIconSx = (theme) => ({
   color: theme.palette.primary.main, // TODO: update to #003368 from theme color
 });
 
-// ---------------------------------------------------------------------------
+// --------------------------------------------------
 // Sub-components
-// ---------------------------------------------------------------------------
+// --------------------------------------------------
 
 /** Folder icon that switches between filled and outlined based on selection. */
-const FolderItemIcon = ({ selected, size }) => (
-  <ListItemIcon sx={{ minWidth: 36 }}>
+const FolderItemIcon = ({ selected, size, sx }) => (
+  <ListItemIcon sx={{ minWidth: 32, ...sx }}>
     {selected ? (
       <FolderIcon sx={selectedFolderIconSx} fontSize={size} />
     ) : (
@@ -90,9 +100,9 @@ const MY_DOCUMENTS = {
   documents: null,
 };
 
-// ---------------------------------------------------------------------------
+// --------------------------------------------------
 // DocumentMenu
-// ---------------------------------------------------------------------------
+// --------------------------------------------------
 
 /**
  * Props:
@@ -110,9 +120,9 @@ export default function DocumentMenu({ documents = [] }) {
 
   const mobileOpen = Boolean(anchorEl);
 
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------
   // Derived data
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------
 
   // TODO: Check for duplicacy
   const selectedCategory = useMemo(
@@ -155,9 +165,9 @@ export default function DocumentMenu({ documents = [] }) {
     [documents],
   );
 
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------
   // Event Handlers
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------
 
   const handleCategorySelect = (catId) => {
     setSelectedCategoryId(catId);
@@ -173,9 +183,9 @@ export default function DocumentMenu({ documents = [] }) {
     setAnchorEl(null);
   };
 
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------
   // Render: document list (content area) - ***IGNORE THIS PART WHEN INTEGRATING***
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------
 
   const renderDocumentList = () => {
     if (!displayedDocs.length) {
@@ -212,14 +222,18 @@ export default function DocumentMenu({ documents = [] }) {
     );
   };
 
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------
   // Render: desktop sidebar
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------
 
   const renderDesktopSidebar = () => (
     <Paper
       elevation={0}
-      sx={{ borderRight: `1px solid ${theme.palette.divider}`, minHeight: 240, borderRadius: 0 }}
+      sx={{
+        borderRight: `1px solid ${theme.palette.divider}`,
+        minHeight: 240,
+        borderRadius: 0,
+      }}
       className="side-bar-wrapper h-full"
     >
       {/* TODO: update to desired divider color ^ from theme */}
@@ -234,7 +248,7 @@ export default function DocumentMenu({ documents = [] }) {
 
           return (
             <React.Fragment key={cat.id ?? "my-documents"}>
-              <MenuItemButton
+              <DesktopMenuItem
                 selected={isCatSelected && !selectedSubCategoryId}
                 onClick={() => handleCategorySelect(cat.id)}
               >
@@ -246,7 +260,7 @@ export default function DocumentMenu({ documents = [] }) {
                   ) : (
                     <ExpandMoreIcon fontSize="small" />
                   ))}
-              </MenuItemButton>
+              </DesktopMenuItem>
 
               {visibleSubs.length > 0 && (
                 <Collapse in={isExpanded} timeout="auto" unmountOnExit>
@@ -255,20 +269,21 @@ export default function DocumentMenu({ documents = [] }) {
                       const isSubSelected =
                         isCatSelected && selectedSubCategoryId === sub.id;
                       return (
-                        <MenuItemButton
+                        <DesktopMenuItem
                           key={sub.id}
                           selected={isSubSelected}
                           onClick={() =>
                             handleSubCategorySelect(cat.id, sub.id)
                           }
-                          sx={{ pl: 4 }}
+                          sx={{ pl: 3 }}
                         >
                           <FolderItemIcon
                             selected={isSubSelected}
                             size="small"
+                            sx={{ minWidth: 28 }} // overrides default minWidth 32px for subcategories
                           />
                           <ListItemText primary={sub.displaySubCategoryName} />
-                        </MenuItemButton>
+                        </DesktopMenuItem>
                       );
                     })}
                   </List>
@@ -281,9 +296,9 @@ export default function DocumentMenu({ documents = [] }) {
     </Paper>
   );
 
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------
   // Render: mobile dropdown
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------
 
   const renderMobileDropdown = () => (
     <Box sx={{ display: "flex", alignItems: "center" }}>
@@ -299,11 +314,15 @@ export default function DocumentMenu({ documents = [] }) {
           justifyContent: "flex-start",
           textTransform: "none",
           color: "text.primary",
+          pl: 0,
+          py: 1,
         }}
       >
         <FolderIcon sx={{ color: theme.palette.primary.main, mr: 1 }} />
         {/* TODO: update ^ to desired color from theme */}
-        <Typography variant="subtitle1">{activeLabel}</Typography>
+        <Typography variant="subtitle1" sx={{ lineHeight: 1.5 }}>
+          {activeLabel}
+        </Typography>
       </Button>
 
       <Menu
@@ -324,31 +343,33 @@ export default function DocumentMenu({ documents = [] }) {
 
           return (
             <React.Fragment key={cat.id ?? "my-documents"}>
-              <MenuItem
+              <MobileMenuItem
                 selected={isCatSelected && !selectedSubCategoryId}
                 onClick={() => handleCategorySelect(cat.id)}
+                className="mobile-menu-category"
               >
                 <FolderItemIcon selected={isCatSelected} />
                 <ListItemText>{cat.displayCategoryName}</ListItemText>
-              </MenuItem>
+              </MobileMenuItem>
 
               {visibleSubs.map((sub) => {
                 const isSubSelected =
                   isCatSelected && selectedSubCategoryId === sub.id;
                 return (
-                  <MenuItem
+                  <MobileMenuItem
                     key={sub.id}
                     selected={isSubSelected}
                     onClick={() => handleSubCategorySelect(cat.id, sub.id)}
-                    sx={{ pl: 5 }}
+                    sx={{ pl: 4 }}
+                    className="mobile-menu-subcategory"
                   >
                     <FolderItemIcon selected={isSubSelected} size="small" />
                     <ListItemText>
-                      <Typography variant="body2">
+                      <Typography variant="body1">
                         {sub.displaySubCategoryName}
                       </Typography>
                     </ListItemText>
-                  </MenuItem>
+                  </MobileMenuItem>
                 );
               })}
             </React.Fragment>
@@ -358,9 +379,9 @@ export default function DocumentMenu({ documents = [] }) {
     </Box>
   );
 
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------
   // Main render
-  // ---------------------------------------------------------------------------
+  // --------------------------------------------------
 
   // True when a category with visible subcategories is selected but none chosen yet.
   const awaitingSubCategorySelection =

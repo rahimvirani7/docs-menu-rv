@@ -155,8 +155,13 @@ export default function DocumentMenu({ documents = [] }) {
     }
     if (!selectedCategory) return [];
     if (selectedSubCategory) return toArray(selectedSubCategory.documents);
-    // Category with no subcategories (e.g. "Other Documents")
-    return toArray(selectedCategory.documents);
+    // Category selected — return own docs + all subcategory docs
+    return [
+      ...toArray(selectedCategory.documents),
+      ...toArray(selectedCategory.subCategories).flatMap((sub) =>
+        toArray(sub.documents),
+      ),
+    ];
   }, [documents, selectedCategoryId, selectedCategory, selectedSubCategory]);
 
   // Categories / subcategories that have at least one document (used in both views).
@@ -383,21 +388,16 @@ export default function DocumentMenu({ documents = [] }) {
   // Main render
   // --------------------------------------------------
 
-  // True when a category with visible subcategories is selected but none chosen yet.
-  const awaitingSubCategorySelection =
-    selectedCategory &&
-    !selectedSubCategoryId &&
-    toArray(selectedCategory.subCategories).some((sub) => subDocCount(sub) > 0);
-
   return (
+    console.log("displayedDocs", displayedDocs),
     <Box sx={{ width: "100%", p: { xs: 1, sm: 2 } }}>
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, sm: 4, md: 3 }} className="side-bar-grid">
+        <Grid size={{ xs: 12, sm: 4, md: 2 }} className="side-bar-grid">
           {isMobile ? renderMobileDropdown() : renderDesktopSidebar()}
         </Grid>
 
         {/* ***IGNORE THIS PART WHEN INTEGRATING*** */}
-        <Grid size={{ xs: 12, sm: 8, md: 9 }}>
+        <Grid size={{ xs: 12, sm: 8, md: 10 }}>
           <Box sx={{ pl: { xs: 0, sm: 3 }, pt: { xs: 1, sm: 0 } }}>
             <Typography variant="h6" sx={{ mb: 2 }}>
               Your service categories
@@ -416,13 +416,7 @@ export default function DocumentMenu({ documents = [] }) {
                 {activeLabel}
               </Typography>
 
-              {awaitingSubCategorySelection ? (
-                <Typography variant="body2" color="text.secondary">
-                  Select a subcategory to view documents.
-                </Typography>
-              ) : (
-                renderDocumentList()
-              )}
+              {renderDocumentList()}
             </Box>
           </Box>
         </Grid>

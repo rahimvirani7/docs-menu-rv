@@ -337,7 +337,7 @@ export default function DocumentMenu({ documents = [] }) {
         onClose={() => setAnchorEl(null)}
         anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
         transformOrigin={{ vertical: "top", horizontal: "left" }}
-        MenuListProps={{ "aria-labelledby": "category-button" }} // shows error in console but needed for accessibility
+        aria-labelledby="category-button"
       >
         {/* Categories + indented subcategories (includes "My Documents" sentinel at index 0) */}
         {visibleCategories.map((cat) => {

@@ -389,7 +389,6 @@ export default function DocumentMenu({ documents = [] }) {
   // --------------------------------------------------
 
   return (
-    console.log("displayedDocs", displayedDocs),
     <Box sx={{ width: "100%", p: { xs: 1, sm: 2 } }}>
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, sm: 4, md: 2 }} className="side-bar-grid">
@@ -412,8 +411,16 @@ export default function DocumentMenu({ documents = [] }) {
                 minHeight: 160,
               }}
             >
-              <Typography variant="subtitle1" gutterBottom>
-                {activeLabel}
+              <Typography
+                sx={{ color: theme.palette.primary.main }}
+                variant="subtitle1"
+                gutterBottom
+              >
+                <i>
+                  {selectedSubCategory &&
+                    `${selectedCategory.displayCategoryName} > `}
+                  {activeLabel}
+                </i>
               </Typography>
 
               {renderDocumentList()}

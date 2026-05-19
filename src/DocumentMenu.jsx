@@ -37,6 +37,20 @@ const DesktopMenuItem = styled(ListItemButton)`
       }
     },
 
+    &.Mui-selected.sub-category-menu-item {
+      border-bottom: 2px solid ${theme.palette.primary.main};
+      border-right: none;
+      background-color: unset;
+    },
+
+    &.selected-category-menu-item {
+      background-color: ${theme.palette.action.selected};
+
+      .MuiListItemText-root {
+        color: ${theme.palette.primary.main};
+      }
+    }
+
     .MuiTypography-root {
       font-size: 0.875rem;
       line-height: 1.25rem;
@@ -256,8 +270,15 @@ export default function DocumentMenu({ documents = [] }) {
               <DesktopMenuItem
                 selected={isCatSelected && !selectedSubCategoryId}
                 onClick={() => handleCategorySelect(cat.id)}
+                className={
+                  isCatSelected && selectedSubCategoryId
+                    ? "selected-category-menu-item"
+                    : ""
+                }
               >
-                <FolderItemIcon selected={isCatSelected} />
+                <FolderItemIcon
+                  selected={isCatSelected && !selectedSubCategoryId}
+                />
                 <ListItemText primary={cat.displayCategoryName} />
                 {visibleSubs.length > 0 &&
                   (isExpanded ? (
@@ -281,6 +302,7 @@ export default function DocumentMenu({ documents = [] }) {
                             handleSubCategorySelect(cat.id, sub.id)
                           }
                           sx={{ pl: 3 }}
+                          className="sub-category-menu-item"
                         >
                           <FolderItemIcon
                             selected={isSubSelected}

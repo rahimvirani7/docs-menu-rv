@@ -23,7 +23,6 @@ import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutl
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 
-// TODO: Identify all "theme" properties and map them to the provided design specifics at the time of integration.
 const DesktopMenuItem = styled(ListItemButton)`
   ${({ theme }) => `
     padding: 7px 12px;
@@ -49,12 +48,12 @@ const DesktopMenuItem = styled(ListItemButton)`
       .MuiListItemText-root {
         color: ${theme.palette.primary.main};
       }
-    }
+    },
 
     .MuiTypography-root {
       font-size: 0.875rem;
       line-height: 1.25rem;
-    }
+    },
   `}
 `;
 
@@ -87,7 +86,7 @@ const catDocCount = (cat) =>
   toArray(cat.subCategories).reduce((sum, sub) => sum + subDocCount(sub), 0);
 
 const selectedFolderIconSx = (theme) => ({
-  color: theme.palette.primary.main, // TODO: update to #003368 from theme color
+  color: theme.palette.primary.main,
 });
 
 // --------------------------------------------------
@@ -125,7 +124,7 @@ const MY_DOCUMENTS = {
  */
 export default function DocumentMenu({ documents = [] }) {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm")); // TODO: confirm sm breakpoint starts at 767px when integrating
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const [selectedCategoryId, setSelectedCategoryId] = useState(null); // null = "My Documents" (all docs)
   const [selectedSubCategoryId, setSelectedSubCategoryId] = useState(null);
@@ -138,13 +137,11 @@ export default function DocumentMenu({ documents = [] }) {
   // Derived data
   // --------------------------------------------------
 
-  // TODO: Check for duplicacy
   const selectedCategory = useMemo(
     () => documents.find((c) => c.id === selectedCategoryId) ?? null,
     [documents, selectedCategoryId],
   );
 
-  // TODO: Check for duplicacy
   const selectedSubCategory = useMemo(
     () =>
       selectedCategory?.subCategories?.find(
@@ -255,7 +252,6 @@ export default function DocumentMenu({ documents = [] }) {
       }}
       className="side-bar-wrapper h-full"
     >
-      {/* TODO: update to desired divider color ^ from theme */}
       <List component="nav" disablePadding>
         {/* Categories (includes "My Documents" sentinel at index 0) */}
         {visibleCategories.map((cat) => {
@@ -346,7 +342,6 @@ export default function DocumentMenu({ documents = [] }) {
         }}
       >
         <FolderIcon sx={{ color: theme.palette.primary.main, mr: 1 }} />
-        {/* TODO: update ^ to desired color from theme */}
         <Typography variant="subtitle1" sx={{ lineHeight: 1.5 }}>
           {activeLabel}
         </Typography>
